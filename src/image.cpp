@@ -7,9 +7,36 @@ using namespace v8::juice::convert;
 using namespace aspect;
 using namespace aspect::v8_core;
 
-DECLARE_LIBRARY_ENTRYPOINTS(image_install, image_uninstall);
+// DECLARE_LIBRARY_ENTRYPOINTS(image_install, image_uninstall);
 
 V8_IMPLEMENT_CLASS_BINDER(aspect::image2::device, device);
+
+/*
+
+TODO - invoke from dependent libraries
+set global "initialized" state - init only once
+destroy in dependent libraries
+maintain reference count.
+
+do this via shared pointer?  so that when 0 references the object is destroyed?
+
+aspect::image::init(target);
+aspect::image::cleanup();
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  INSTALL IMAGE LIBRARY INTO v8 GLOBAL OBJECT AUTOMATICALLY
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  THIS WAY WE DO NOT NEED KEEP/PASS TARGET!
+
+
+class local_initializer
+{
+	public:
+
+		local_initializer();
+		~local_initializer();
+};
+
+static local_initializer g_local_initializer;
+*/
 
 void image_install(Handle<Object> target)
 {
@@ -75,47 +102,76 @@ namespace v8 { namespace juice {
 
 namespace aspect { namespace image2 {
 
-	std::vector<boost::shared_ptr<device>>	g_devices;
-	uint64_t bitmap::total_memory_ = 0;
+uint32_t g_reference_count = 0;
 
-	enum grid_type { GRID_LINE, GRID_1, GRID_2 };
+void init(void)
+{
+	using namespace aspect::image2;
 
-	static inline grid_type get_grid(int x, int y)
+	g_reference_count++;
+	if(g_reference_count > 1)
+		return;
+
+	Handle<Object> target = v8::Context::GetCurrent()->Global();
+
+	ClassBinder<device>* binder = new ClassBinder<device>(target);
+	V8_SET_CLASS_BINDER(device, binder);
+	(*binder)
+		.BindMemFunc<uint32_t, &device::get_dropped_frames>("get_dropped_frames")
+		.Seal();
+}
+
+void cleanup(void)
+{
+	g_reference_count--;
+	if(g_reference_count)
+		return;
+
+//	Handle<Object> target = v8::Context::GetCurrent()->Global();
+	V8_DESTROY_CLASS_BINDER(device);
+}
+
+std::vector<boost::shared_ptr<device>>	g_devices;
+uint64_t bitmap::total_memory_ = 0;
+
+enum grid_type { GRID_LINE, GRID_1, GRID_2 };
+
+static inline grid_type get_grid(int x, int y)
+{
+	if ( (x % 8 == 0) || (y % 8 == 0) ) return GRID_LINE;
+	else if ( ((x / 8) + (y / 8)) % 2 ) return GRID_1;
+	else                                return GRID_2;
+}
+
+void bitmap::checker3(const uint32_t c1, const uint32_t c2, const uint32_t c3)
+{
+	uint32_t* tmp = reinterpret_cast<uint32_t*>(data());
+
+	for (int y = 0; y < size_.height; ++y)
 	{
-		if ( (x % 8 == 0) || (y % 8 == 0) ) return GRID_LINE;
-		else if ( ((x / 8) + (y / 8)) % 2 ) return GRID_1;
-		else                                return GRID_2;
-	}
-
-	void bitmap::checker3(const uint32_t c1, const uint32_t c2, const uint32_t c3)
-	{
-		uint32_t* tmp = reinterpret_cast<uint32_t*>(data());
-
-		for (int y = 0; y < size_.height; ++y)
+		for (int x = 0; x < size_.width; ++x, ++tmp)
 		{
-			for (int x = 0; x < size_.width; ++x, ++tmp)
+			switch( get_grid(x,y) )
 			{
-				switch( get_grid(x,y) )
-				{
-				case GRID_LINE: *tmp=c3; break;
-				case GRID_1:    *tmp=c1; break;
-				case GRID_2:    *tmp=c2; break;
-				}
+			case GRID_LINE: *tmp=c3; break;
+			case GRID_1:    *tmp=c1; break;
+			case GRID_2:    *tmp=c2; break;
 			}
 		}
 	}
+}
 
-	void bitmap::checker2(uint32_t c1, uint32_t c2)
+void bitmap::checker2(uint32_t c1, uint32_t c2)
+{
+	uint32_t* tmp = reinterpret_cast<uint32_t*>(data());
+	for (int y=0; y < size_.height; ++y)
 	{
-		uint32_t* tmp = reinterpret_cast<uint32_t*>(data());
-		for (int y=0; y < size_.height; ++y)
+		for (int x=0; x < size_.width; ++x, ++tmp)
 		{
-			for (int x=0; x < size_.width; ++x, ++tmp)
-			{
-				*tmp = ((x>>3)^(y>>3) & 1? c1 : c2);
-			}
+			*tmp = ((x>>3)^(y>>3) & 1? c1 : c2);
 		}
 	}
+}
 
 	// ----------------
 /*
@@ -138,32 +194,48 @@ namespace aspect { namespace image2 {
 //	aspect::v8_core::register_v8_binding image_device_bindings_init(&aspect::image2::image_device_bindings);
 
 
-	void device::schedule_input_frame( boost::shared_ptr<shared_bitmap_container> & frame, bool drop_frames)
+void device::schedule_input_frame( boost::shared_ptr<shared_bitmap_container> & frame, bool drop_frames)
+{
+
+	capture_queue_.push(frame);
+
+	// clear up the queue so that at most we have 2 pending frames
+	if(drop_frames)
 	{
-
-		capture_queue_.push(frame);
-
-		// clear up the queue so that at most we have 2 pending frames
-		if(drop_frames)
+		while(capture_queue_.size() > 2)
 		{
-			while(capture_queue_.size() > 2)
-			{
-				printf("image::device \"%s\" dropping input frame\n",name_.c_str());
-				boost::shared_ptr<shared_bitmap_container> container;
-				capture_queue_.try_pop(container);
-				dropped_frames_++;
-			}
+			printf("image::device \"%s\" dropping input frame\n",name_.c_str());
+			boost::shared_ptr<shared_bitmap_container> container;
+			capture_queue_.try_pop(container);
+			dropped_frames_++;
 		}
 	}
+}
 
-	Handle<Value> device::get_info(void)
-	{
-		HandleScope scope;
+Handle<Value> device::get_info(void)
+{
+	HandleScope scope;
 
-		Handle<Object> o = Object::New();
-		o->Set(String::NewSymbol("dropped_frames"), convert::UInt32ToJS(dropped_frames_));
+	Handle<Object> o = Object::New();
+	o->Set(String::NewSymbol("dropped_frames"), convert::UInt32ToJS(dropped_frames_));
 
-		return scope.Close(o);
-	}
+	return scope.Close(o);
+}
 
 } } // aspect::image
+
+
+// sanity check
+#pragma warning ( disable : 4702 ) // unreachable code
+BOOL APIENTRY DllMain(HANDLE hModule, DWORD  fdwReason, LPVOID)
+{
+	switch (fdwReason)
+	{
+		case DLL_PROCESS_DETACH:
+			{
+				_aspect_assert(aspect::image2::g_reference_count == 0 && "image library was not terminated correctly");
+			}
+			break;
+	}
+	return TRUE;
+}

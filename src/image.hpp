@@ -205,6 +205,10 @@ class IMAGE_API device : public shared_ptr_object<device>
 		uint32_t dropped_frames_;
 };
 
+// NOTE - this library must be initialized and cleaned up using these functions!
+void IMAGE_API init(void);
+void IMAGE_API cleanup(void);
+
 extern IMAGE_API std::vector<boost::shared_ptr<device>>	g_devices;
 
 } } // aspect::image
