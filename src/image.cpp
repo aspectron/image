@@ -9,7 +9,7 @@ using namespace aspect::v8_core;
 
 // DECLARE_LIBRARY_ENTRYPOINTS(image_install, image_uninstall);
 
-V8_IMPLEMENT_CLASS_BINDER(aspect::image2::device, device);
+V8_IMPLEMENT_CLASS_BINDER(aspect::image::device, device);
 
 /*
 
@@ -58,7 +58,7 @@ void image_install(Handle<Object> target)
 	// MOVE THIS TO DLLMAIN!
 	// MOVE THIS TO DLLMAIN!
 	// MOVE THIS TO DLLMAIN!
-	using namespace aspect::image2;
+	using namespace aspect::image;
 
 	ClassBinder<device>* binder = new ClassBinder<device>(target);
 	V8_SET_CLASS_BINDER(device, binder);
@@ -84,29 +84,29 @@ void image_install(Handle<Object> target)
 
 void image_uninstall(Handle<Object> target) 
 {
-	V8_DESTROY_CLASS_BINDER(aspect::image2::device);
+	V8_DESTROY_CLASS_BINDER(aspect::image::device);
 }
 
 namespace v8 { namespace juice {
 
-	V8_DECLARE_WEAK_CLASS_CTOR(aspect::image2::device, args, exceptionText)
+	V8_DECLARE_WEAK_CLASS_CTOR(aspect::image::device, args, exceptionText)
 	{
 		throw std::runtime_error("only derived classes may be created");
 	}
 
-	V8_DECLARE_WEAK_CLASS_DTOR(aspect::image2::device, o)
+	V8_DECLARE_WEAK_CLASS_DTOR(aspect::image::device, o)
 	{
 		o->release();
 	}
 } } // v8::juice
 
-namespace aspect { namespace image2 {
+namespace aspect { namespace image {
 
 uint32_t g_reference_count = 0;
 
 void init(void)
 {
-	using namespace aspect::image2;
+	using namespace aspect::image;
 
 	g_reference_count++;
 	if(g_reference_count > 1)
@@ -191,7 +191,7 @@ void bitmap::checker2(uint32_t c1, uint32_t c2)
 
 	}
 */
-//	aspect::v8_core::register_v8_binding image_device_bindings_init(&aspect::image2::image_device_bindings);
+//	aspect::v8_core::register_v8_binding image_device_bindings_init(&aspect::image::image_device_bindings);
 
 
 void device::schedule_input_frame( boost::shared_ptr<shared_bitmap_container> & frame, bool drop_frames)
@@ -233,7 +233,7 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD  fdwReason, LPVOID)
 	{
 		case DLL_PROCESS_DETACH:
 			{
-				_aspect_assert(aspect::image2::g_reference_count == 0 && "image library was not terminated correctly");
+				_aspect_assert(aspect::image::g_reference_count == 0 && "image library was not terminated correctly");
 			}
 			break;
 	}

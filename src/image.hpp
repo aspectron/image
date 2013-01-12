@@ -6,7 +6,7 @@
 #include "geometry.hpp"
 #include "v8_core.hpp"
 #include "shared_ptr_object.hpp"
-#include "math.hpp"
+// #include "math.hpp"
 
 #if OS(WINDOWS)
 //	#pragma warning ( disable : 4251 )
@@ -21,7 +21,7 @@
 #define IMAGE_API // nothing, symbols in a shared library are exported by default
 #endif
 
-namespace aspect { namespace image2 {
+namespace aspect { namespace image {
 
 enum encoding
 {
@@ -214,7 +214,7 @@ extern IMAGE_API std::vector<boost::shared_ptr<device>>	g_devices;
 } } // aspect::image
 
 
-#define WEAK_CLASS_TYPE aspect::image2::device
+#define WEAK_CLASS_TYPE aspect::image::device
 #define WEAK_CLASS_NAME __image_device_interface
 #include <v8/juice/WeakJSClassCreator-Decl.h>
 
