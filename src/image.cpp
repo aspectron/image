@@ -204,7 +204,8 @@ void device::schedule_input_frame( boost::shared_ptr<shared_bitmap_container> & 
 	{
 		while(capture_queue_.size() > 2)
 		{
-			printf("image::device \"%s\" dropping input frame\n",name_.c_str());
+			if(trace_dropped_frames_)
+				printf("image::device \"%s\" dropping input frame\n",name_.c_str());
 			boost::shared_ptr<shared_bitmap_container> container;
 			capture_queue_.try_pop(container);
 			dropped_frames_++;

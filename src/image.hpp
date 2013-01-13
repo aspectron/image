@@ -169,7 +169,7 @@ class IMAGE_API device : public shared_ptr_object<device>
 		V8_DECLARE_CLASS_BINDER(device);
 
 		device(const char *name = "N/A")
-			: name_(name), dropped_frames_(0)
+			: name_(name), dropped_frames_(0), trace_dropped_frames_(false)
 		{
 		}
 
@@ -203,6 +203,7 @@ class IMAGE_API device : public shared_ptr_object<device>
 		encoding encoding_;
 
 		uint32_t dropped_frames_;
+		bool trace_dropped_frames_;
 };
 
 // NOTE - this library must be initialized and cleaned up using these functions!
