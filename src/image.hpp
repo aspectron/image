@@ -8,6 +8,8 @@
 #include "shared_ptr_object.hpp"
 // #include "math.hpp"
 
+#include <boost/thread/shared_mutex.hpp>
+
 #if OS(WINDOWS)
 //	#pragma warning ( disable : 4251 )
 #if defined(IMAGE_EXPORTS)
