@@ -227,6 +227,7 @@ Handle<Value> device::get_info(void)
 
 
 // sanity check
+#if OS(WINDOWS)
 #pragma warning ( disable : 4702 ) // unreachable code
 BOOL APIENTRY DllMain(HANDLE hModule, DWORD  fdwReason, LPVOID)
 {
@@ -240,3 +241,4 @@ BOOL APIENTRY DllMain(HANDLE hModule, DWORD  fdwReason, LPVOID)
 	}
 	return TRUE;
 }
+#endif
