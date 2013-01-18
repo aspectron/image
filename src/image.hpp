@@ -6,6 +6,7 @@
 #include "geometry.hpp"
 #include "v8_core.hpp"
 #include "shared_ptr_object.hpp"
+#include "boost/thread/shared_mutex.hpp"
 // #include "math.hpp"
 
 #include <boost/thread/shared_mutex.hpp>
