@@ -35,6 +35,7 @@ enum encoding
 	RGBA8,
 	ARGB8,
 	BGRA8,
+	RGB8,
 	RGB10,
 	RGB32F
 };
@@ -84,6 +85,7 @@ class IMAGE_API bitmap : boost::noncopyable
 			{
 				case YUV8: return 2;
 				case A8:		return 1;
+				case RGB8:		return 3;
 				default:			return 4; // all other formats use 4 bytes per pixel
 			}
 		}
@@ -172,7 +174,7 @@ class IMAGE_API device : public shared_ptr_object<device>
 		V8_DECLARE_CLASS_BINDER(device);
 
 		device(const char *name = "N/A")
-			: name_(name), dropped_frames_(0), trace_dropped_frames_(false)
+			: name_(name), encoding_(UNKNOWN), dropped_frames_(0), trace_dropped_frames_(false)
 		{
 		}
 
