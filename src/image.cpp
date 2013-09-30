@@ -12,20 +12,24 @@ using namespace v8;
 
 DECLARE_LIBRARY_ENTRYPOINTS(image_install, image_uninstall);
 
+device::js_class* device::js_binding = nullptr;
+
 Handle<Value> image_install()
 {
-	v8pp::class_<device, v8pp::no_factory>device_class;
-	device_class
+	v8pp::module image_module;
+
+	device::js_binding = new device::js_class;
+	(*device::js_binding)
 		.set("get_dropped_frames", &device::get_dropped_frames)
 		;
+	image_module.set("__image_device_interface", *device::js_binding);
 
-	v8pp::module image_module;
-	image_module.set("__image_device_interface", device_class);
 	return image_module.new_instance();
 }
 
 void image_uninstall(Handle<Value> library)
 {
+	delete device::js_binding;
 }
 
 uint64_t bitmap::total_memory_ = 0;

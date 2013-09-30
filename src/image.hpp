@@ -92,7 +92,7 @@ public:
 		}
 	}
 
-	uint32_t stride() const { return width() * bytes_per_pixel(); }
+	uint32_t row_bytes() const { return width() * bytes_per_pixel(); }
 
 	uint8_t const* data() const { return data_.empty()? nullptr : &data_[0]; }
 	uint8_t* data() { return data_.empty()? nullptr : &data_[0]; }
@@ -166,6 +166,10 @@ private:
 class IMAGE_API device
 {
 public:
+	typedef v8pp::class_<device, v8pp::no_factory> js_class;
+
+	static js_class* js_binding;
+
 	explicit device(char const* name = "N/A")
 		: name_(name? name : "")
 		, encoding_(UNKNOWN)
@@ -188,10 +192,10 @@ public:
 	virtual bool acquire_input_frame(shared_bitmap_container& frame) { return capture_queue_.try_pop(frame); }
 	virtual void acquire_input_frame_blocking(shared_bitmap_container& frame) { return capture_queue_.wait_and_pop(frame); }
 	virtual void release_input_frame(shared_bitmap_container const& frame) { available_queue_.push(frame); }
-	virtual void schedule_output_frame(shared_bitmap_container) { _aspect_assert(false && "aspecet::image::device::schedule_output_frame() is not overloaded"); }
+	virtual void schedule_output_frame(shared_bitmap_container const&) { _aspect_assert(false && "aspecet::image::device::schedule_output_frame() is not overloaded"); }
 	virtual void schedule_input_frame(shared_bitmap_container const& frame, bool drop_frames);
 
-private:
+protected:
 	std::string name_;
 	encoding encoding_;
 	uint32_t dropped_frames_;
