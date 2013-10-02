@@ -98,7 +98,7 @@ Handle<Value> device::get_info() const
 	HandleScope scope;
 
 	Handle<Object> o = Object::New();
-	o->Set(String::NewSymbol("dropped_frames"), v8pp::to_v8(dropped_frames_));
+	set_option(o, "dropped_frames", dropped_frames_);
 
 	return scope.Close(o);
 }
