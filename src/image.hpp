@@ -75,6 +75,11 @@ public:
 		pixel_format_ = pixel_format;
 	}
 
+	void resize(unsigned width, unsigned height)
+	{
+		resize(width, height, pixel_format_);
+	}
+
 	image_size size() const { return size_; } 
 	uint32_t width() const { return size_.width; }
 	uint32_t height() const { return size_.height; }
