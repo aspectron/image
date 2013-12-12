@@ -32,6 +32,7 @@
       <AdditionalDependencies>jsx.lib;v8.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalLibraryDirectories>$(JSX)\bin\$(Configuration) $(Platform)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
 </Project>
