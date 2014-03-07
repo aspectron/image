@@ -80,7 +80,7 @@ public:
 		resize(width, height, pixel_format_);
 	}
 
-	image_size size() const { return size_; } 
+	image_size const& size() const { return size_; }
 	uint32_t width() const { return size_.width; }
 	uint32_t height() const { return size_.height; }
 	encoding pixel_format() const { return pixel_format_; }
