@@ -171,10 +171,6 @@ private:
 class IMAGE_API device
 {
 public:
-	typedef v8pp::class_<device, v8pp::no_factory> js_class;
-
-	static js_class* js_binding;
-
 	explicit device(char const* name = "N/A")
 		: name_(name? name : "")
 		, encoding_(UNKNOWN)
