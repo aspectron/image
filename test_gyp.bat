@@ -1,0 +1,1 @@
+..\jsx-priv\build\tools\gyp\gyp --depth=. -d all image.gyp
