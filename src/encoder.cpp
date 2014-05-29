@@ -1,7 +1,6 @@
 #include "image.hpp"
 #include "encoder.hpp"
 
-#include <zlib.h>
 #include <png.h>
 #if HAVE(JPEG_SUPPORT)
 #include <jpeglib.h>

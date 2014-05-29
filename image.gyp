@@ -7,8 +7,7 @@
             'dependencies': [
                 '<(jsx)/sdk/core/core.gyp:core',
                 '<(jsx)/extern/extern.gyp:*',
-                '<(jsx)/extern/zlib/zlib.gyp:zlib',
-                '<(jsx)/extern/libpng/libpng.gyp:libpng',
+                'extern/libpng/libpng.gyp:libpng',
             ],
             'direct_dependent_settings': {
                 'include_dirs': ['src'],
