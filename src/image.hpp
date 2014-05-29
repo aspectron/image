@@ -24,6 +24,7 @@
 
 namespace aspect { namespace image {
 
+/// Image pixel format
 enum encoding
 {
 	UNKNOWN,
@@ -38,7 +39,7 @@ enum encoding
 	RGB32F
 };
 
-//template<class _Ax = std::allocator<uint8_t>>
+/// Bitmap image with specified size and pixel format
 class IMAGE_API bitmap : boost::noncopyable
 {
 public:
@@ -47,9 +48,10 @@ public:
 	{
 	}
 
-	bitmap(unsigned width, unsigned height, encoding pixel_format = BGRA8)
+	/// Create a bitmap with specified size and pixel format
+	bitmap(image_size const& size, encoding pixel_format = BGRA8)
 	{
-		resize(width, height, pixel_format);
+		resize(size, pixel_format);
 	}
 
 	~bitmap()
@@ -57,36 +59,33 @@ public:
 		total_memory_ -= data_.size();
 	}
 
-	void resize(unsigned width, unsigned height, encoding pixel_format)
+	/// Resize bitmap and change pixel format
+	void resize(image_size const& size, encoding pixel_format)
 	{
 		boost::unique_lock<boost::shared_mutex> lock(shared_mutex_);
 
-		if (width == size_.width && height == size_.height && pixel_format_ == pixel_format)
+		if (size != size_ || pixel_format_ == pixel_format)
 		{
-			return;
+			total_memory_ -= data_.size();
+			data_.resize(size.width * size.height * bytes_per_pixel(pixel_format), 0);
+			total_memory_ += data_.size();
+
+			size_ = size;
+			pixel_format_ = pixel_format;
 		}
-
-		total_memory_ -= data_.size();
-		data_.resize(width * height * bytes_per_pixel(pixel_format), 0);
-		total_memory_ += data_.size();
-
-		size_.width = width;
-		size_.height = height;
-		pixel_format_ = pixel_format;
 	}
 
-	void resize(unsigned width, unsigned height)
+	/// Resize bitmap
+	void resize(image_size const& size)
 	{
-		resize(width, height, pixel_format_);
+		resize(size, pixel_format_);
 	}
 
 	image_size const& size() const { return size_; }
-	uint32_t width() const { return size_.width; }
-	uint32_t height() const { return size_.height; }
 	encoding pixel_format() const { return pixel_format_; }
-	uint32_t bytes_per_pixel() const { return bytes_per_pixel(pixel_format_); }
+	size_t bytes_per_pixel() const { return bytes_per_pixel(pixel_format_); }
 
-	static uint32_t bytes_per_pixel(encoding pixel_format)
+	static size_t bytes_per_pixel(encoding pixel_format)
 	{
 		switch (pixel_format)
 		{
@@ -97,7 +96,7 @@ public:
 		}
 	}
 
-	uint32_t row_bytes() const { return width() * bytes_per_pixel(); }
+	size_t row_bytes() const { return size_.width * bytes_per_pixel(); }
 
 	uint8_t const* data() const { return data_.empty()? nullptr : &data_[0]; }
 	uint8_t* data() { return data_.empty()? nullptr : &data_[0]; }
@@ -119,7 +118,7 @@ private:
 	std::vector<uint8_t, aligned_allocator<uint8_t, 32>> data_;
 	encoding pixel_format_;
 
-	static uint64_t total_memory_;
+	static size_t total_memory_;
 };
 
 typedef boost::shared_ptr<bitmap> shared_bitmap;

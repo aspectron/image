@@ -29,7 +29,7 @@ void image_uninstall(Handle<Value> library)
 {
 }
 
-uint64_t bitmap::total_memory_ = 0;
+size_t bitmap::total_memory_ = 0;
 
 enum grid_type { GRID_LINE, GRID_1, GRID_2 };
 

@@ -1,11 +1,10 @@
-#ifndef _ASPECT_QUANTIZER_HPP_
-#define _ASPECT_QUANTIZER_HPP_
+#ifndef IMAGE_QUANTIZER_HPP_INCLUDED
+#define IMAGE_QUANTIZER_HPP_INCLUDED
 
 #include "geometry.hpp"
 #include "types.hpp"
 
-namespace aspect
-{
+namespace aspect { namespace image {
 
 class IMAGE_API quantizer
 {
@@ -15,7 +14,7 @@ public:
 	{
 	}
 	
-	void quantize(uint8_t const* pixels, unsigned stride, image_rect const& rect, size_t num_colors = 0xff);
+	void quantize(uint8_t const* pixels, size_t stride, image_rect const& rect, size_t num_colors = 0xff);
 
 	void clear() { result_data_.clear(); }
 
@@ -46,6 +45,6 @@ private:
 	size_t lut_size_;
 };
 
-} // aspect
+}} // aspect::image
 
-#endif // _ASPECT_QUANTIZER_HPP_
+#endif // IMAGE_QUANTIZER_HPP_INCLUDED

@@ -13,18 +13,16 @@
             'direct_dependent_settings': {
                 'include_dirs': ['src'],
             },
-            'export_dependent_settings': [
-                '<(jsx)/extern/zlib/zlib.gyp:zlib',
-                '<(jsx)/extern/libpng/libpng.gyp:libpng',
-            ],
             'defines': ['IMAGE_EXPORTS'],
             'sources': [
                 'src/image.hpp',
                 'src/image.cpp',
-                'src/bitmap.cpp',
-                'src/bitmap.hpp',
+                'src/encoder.cpp',
+                'src/encoder.hpp',
                 'src/quantizer.cpp',
                 'src/quantizer.hpp',
+                'src/rescaler.cpp',
+                'src/rescaler.hpp',
             ],
         },
     ],

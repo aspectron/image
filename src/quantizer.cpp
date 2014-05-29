@@ -1,8 +1,7 @@
 #include "image.hpp"
 #include "quantizer.hpp"
 
-namespace aspect
-{
+namespace aspect { namespace image {
 
 struct color24;
 struct color32;
@@ -459,7 +458,7 @@ static void Mark(rgb_box *cube, int label, unsigned char *tag)
 //
 // aspect::quantizer
 //
-void aspect::quantizer::quantize(uint8_t const* pixels, unsigned stride, image_rect const& rect, size_t num_colors)
+void quantizer::quantize(uint8_t const* pixels, size_t stride, image_rect const& rect, size_t num_colors)
 {
 	if ( num_colors >= MAXCOLOR )
 	{
@@ -471,7 +470,7 @@ void aspect::quantizer::quantize(uint8_t const* pixels, unsigned stride, image_r
 	qc.bpp = 4; // tx.get_bpp();
 	// we don't support other color depths
 	assert(qc.bpp == 4 || qc.bpp == 3);
-	qc.stride = stride;
+	qc.stride = static_cast<int>(stride);
 	qc.left = rect.left;
 	qc.top = rect.top;
 	qc.cx = rect.width; //tx.get_width();//iWidth;//iGetWidth();
@@ -589,4 +588,4 @@ void aspect::quantizer::quantize(uint8_t const* pixels, unsigned stride, image_r
 	lut_size_ = num_colors;
 }
 
-} // aspect
+}} // aspect::image
