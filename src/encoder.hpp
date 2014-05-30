@@ -1,8 +1,6 @@
 #ifndef IMAGE_ENCODER_HPP_INCLUDED
 #define IMAGE_ENCODER_HPP_INCLUDED
 
-#define HAVE_JPEG_SUPPORT 0
-
 #include "image.hpp"
 #include "geometry.hpp"
 #include "types.hpp"
@@ -35,7 +33,6 @@ inline std::string generate_png(bitmap const& image, buffer& result,
 		flip, compression, color_type);
 }
 
-#if HAVE(JPEG_SUPPORT)
 /// Compresses bitmap image rect into JPEG and place in result buffer, return MIME type
 IMAGE_API std::string generate_jpeg(bitmap const& image, buffer& result, image_rect rect, bool flip = false, int quality = 90);
 
@@ -43,7 +40,6 @@ inline std::string generate_jpeg(bitmap const& image, buffer& result, bool flip 
 {
 	return generate_jpeg(image, result, image_rect(0, 0, image.size().width, image.size().height), flip, quality);
 }
-#endif
 
 /// Compresses bitmap image rect into BMP and place in result buffer, return MIME type
 IMAGE_API std::string generate_bmp(bitmap const& image, buffer& result, image_rect rect, bool flip = false);

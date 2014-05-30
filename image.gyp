@@ -8,6 +8,7 @@
                 '<(jsx)/sdk/core/core.gyp:core',
                 '<(jsx)/extern/extern.gyp:*',
                 'extern/libpng/libpng.gyp:libpng',
+                'extern/mozjpeg/mozjpeg.gyp:mozjpeg',
             ],
             'direct_dependent_settings': {
                 'include_dirs': ['src'],

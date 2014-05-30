@@ -2,9 +2,7 @@
 #include "encoder.hpp"
 
 #include <png.h>
-#if HAVE(JPEG_SUPPORT)
 #include <jpeglib.h>
-#endif
 
 #include <boost/algorithm/clamp.hpp>
 #include <boost/scope_exit.hpp>
@@ -88,16 +86,16 @@ std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 
 	aspect::image::quantizer quantizer;
 
-	int row_begin = rect.top;
-	int row_end = rect.bottom();
-	int row_step = 1;
+	int y_begin = rect.top;
+	int y_end = rect.bottom();
+	int dy = 1;
 
 	if (color_type == png_color_type::palette)
 	{
 		quantizer.quantize(pixels, stride, rect, 0xff);
 		png_set_PLTE(png, info, (png_color*)quantizer.lut24(), 0xff);
-		row_begin = 0;
-		row_end = rect.height;
+		y_begin = 0;
+		y_end = rect.height;
 	}
 
 	png_set_IHDR(png, info, rect.width, rect.height, 8, libpng_color_type(color_type),
@@ -112,25 +110,24 @@ std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 
 	if (flip)
 	{
-		std::swap(row_begin, row_end);
-		--row_begin; --row_end;
-		row_step = -1;
+		std::swap(y_begin, y_end);
+		--y_begin; --y_end;
+		dy = -1;
 	}
 
 	if (color_type == png_color_type::rgba)
 	{
-		for (int row = row_begin; row != row_end; row += row_step)
+		for (int y = y_begin; y != y_end; y += dy)
 		{
-			png_write_row(png, &pixels[(row*stride)+(rect.left * bytes_per_pixel)]);
+			png_write_row(png, &pixels[(y * stride) + (rect.left * bytes_per_pixel)]);
 		}
 	}
 	else if (color_type == png_color_type::rgb)
 	{
 		buffer buf(rect.width * 3);
-		for (int row = row_begin; row != row_end; row += row_step)
+		for (int y = y_begin; y != y_end; y += dy)
 		{
-			uint8_t const* row_ptr = &pixels[(row * stride)+(rect.left * bytes_per_pixel)];
-			uint8_t const* src = row_ptr;
+			uint8_t const* src = &pixels[(y * stride)+(rect.left * bytes_per_pixel)];;
 			uint8_t* dst = &buf[0];
 			for (int i = 0; i < rect.width; ++i)
 			{
@@ -146,9 +143,9 @@ std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 	else if (color_type == png_color_type::palette)
 	{
 		// quantizer generates index data already in the desired resolution, just store it
-		for (int row = row_begin; row != row_end; row += row_step)
+		for (int y = y_begin; y != y_end; y += dy)
 		{
-			png_write_row(png, quantizer.result_data() + row * rect.width);
+			png_write_row(png, quantizer.result_data() + y * rect.width);
 		}
 	}
 
@@ -157,8 +154,7 @@ std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 	return "image/png";
 }
 
-#if HAVE(JPEG_SUPPORT)
-void bitmap::generate_jpeg(bitmap const& image, buffer& result, image_rect rect, bool flip, int quality)
+std::string generate_jpeg(bitmap const& image, buffer& result, image_rect rect, bool flip, int quality)
 {
 	rect = clamped_rect(rect, image.size());
 
@@ -210,12 +206,20 @@ void bitmap::generate_jpeg(bitmap const& image, buffer& result, image_rect rect,
 	// To keep things simple, we pass one scanline per call; you can pass
 	// more if you wish, though.
 	//
-	//GAPI_Color32 **ppData = ppGetData();
 	buffer line_buf(3 *cinfo.image_width);
-	while (cinfo.next_scanline < cinfo.image_height)
+
+	int y_begin = 0;
+	int y_end = cinfo.image_height;
+	int dy = 1;
+	if (flip)
 	{
-		// !!!TODO: Check for cancel
-		int y = cinfo.next_scanline;
+		std::swap(y_begin, y_end);
+		--y_begin; --y_end;
+		dy = -1;
+	}
+
+	for (int y = y_begin; y != y_end; y += dy)
+	{
 		unsigned char* buf = &line_buf[0];
 		for (int x = 0; x!=(int)cinfo.image_width; ++x)
 		{
@@ -243,7 +247,6 @@ void bitmap::generate_jpeg(bitmap const& image, buffer& result, image_rect rect,
 
 	return "image/jpeg";
 }
-#endif
 
 std::string generate_bmp(bitmap const& image, buffer& result, image_rect rect, bool flip)
 {
@@ -278,20 +281,20 @@ std::string generate_bmp(bitmap const& image, buffer& result, image_rect rect, b
 	uint8_t const* pixels = image.data();
 	size_t const stride = rect.width * image.bytes_per_pixel();
 
-	int row_begin = rect.top;
-	int row_end = rect.bottom();
-	int row_step = 1;
+	int y_begin = rect.top;
+	int y_end = rect.bottom();
+	int dy = 1;
 	if (flip)
 	{
-		std::swap(row_begin, row_end);
-		--row_begin; --row_end;
-		row_step = -1;
+		std::swap(y_begin, y_end);
+		--y_begin; --y_end;
+		dy = -1;
 	}
-	for (int row = row_begin, iY = rect.height - 1; row != row_end; row += row_step, --iY)
+	for (int y = y_begin, iY = rect.height - 1; y != y_end; y += dy, --iY)
 	{
-		uint8_t const* row_ptr = &pixels[(row * stride)+(rect.left * 4)];
+		uint8_t const* src = &pixels[(y * stride)+(rect.left * 4)];
 		uint8_t* dst = ptr + (iY * rect.width * 4);
-		memcpy(dst, row_ptr, rect.width * 4);
+		memcpy(dst, src, rect.width * 4);
 	}
 
 	return "image/bmp";
