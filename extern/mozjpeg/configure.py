@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 
-import sys
 import argparse
 import datetime
-
-print sys.argv
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--project', default='libmozjpeg',
