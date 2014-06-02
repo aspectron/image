@@ -12,19 +12,27 @@
 
 namespace aspect { namespace image {
 
-inline image_rect clamped_rect(image_rect const& rect, image_size const& size)
+inline image_rect clamped_rect(bitmap const& image, image_rect rect)
 {
 	using boost::algorithm::clamp;
 
-	return image_rect(
-		clamp(rect.left, 0, size.width),
-		clamp(rect.top, 0, size.height),
-		clamp(rect.width, 0, size.width - rect.left),
-		clamp(rect.height, 0, size.height - rect.top)
+	rect = image_rect(
+		clamp(rect.left, 0, image.size().width),
+		clamp(rect.top, 0, image.size().height),
+		clamp(rect.width, 0, image.size().width - rect.left),
+		clamp(rect.height, 0, image.size().height - rect.top)
 	);
+
+	_aspect_assert(image.data() && !image.size().is_empty() && !rect.is_empty());
+	_aspect_assert(image.pixel_format() == RGBA8
+		|| image.pixel_format() == ARGB8
+		|| image.pixel_format() == BGRA8
+		||  image.pixel_format() == RGB8);
+
+	return rect;
 }
 
-static int libpng_color_type(png_color_type color_type)
+inline int libpng_color_type(png_color_type color_type)
 {
 	switch (color_type)
 	{
@@ -41,7 +49,7 @@ static int libpng_color_type(png_color_type color_type)
 }
 
 // -- callbacks
-static void png_write_file(png_struct* png, png_byte* data, png_size_t size)
+inline void png_write_file(png_struct* png, png_byte* data, png_size_t size)
 {
 	buffer& result = *reinterpret_cast<buffer*>(png_get_io_ptr(png)); // user data
 	
@@ -50,7 +58,7 @@ static void png_write_file(png_struct* png, png_byte* data, png_size_t size)
 	memcpy(&result[pos], data, size);
 }
 
-static void png_flush_file(png_struct*)
+inline void png_flush_file(png_struct*)
 {
 	// do nothing - used for flushing file i/o
 }
@@ -58,15 +66,10 @@ static void png_flush_file(png_struct*)
 std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 	bool flip, int compression, png_color_type color_type)
 {
-	// TODO - do sanity checks! make sure rects are within the image etc..
-	_aspect_assert(image.data() && !image.size().is_empty() && !rect.is_empty());
-	_aspect_assert(image.bytes_per_pixel() == 4);
-	// -- 
+	rect = clamped_rect(image, rect);
 
-	rect = clamped_rect(rect, image.size());
-
-	uint8_t const* const pixels = image.data();
-	size_t const stride = rect.width * image.bytes_per_pixel();
+	uint8_t const* pixels = image.data();
+	size_t stride = rect.width * image.bytes_per_pixel();
 	size_t const bytes_per_pixel = image.bytes_per_pixel();
 
 	png_struct* png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
@@ -84,71 +87,63 @@ std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 
 	png_set_compression_level(png, compression);
 
-	aspect::image::quantizer quantizer;
+	png_set_IHDR(png, info, rect.width, rect.height, 8, libpng_color_type(color_type),
+		PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_write_info_before_PLTE(png, info);
 
-	int y_begin = rect.top;
+	png_set_packing(png);
+
+	if (image.pixel_format() == BGRA8)
+	{
+		png_set_bgr(png);
+	}
+	if (bytes_per_pixel == 4)
+	{
+		if (color_type == png_color_type::rgba)
+		{
+			if (image.pixel_format() == ARGB8)
+			{
+				png_set_swap_alpha(png);
+			}
+			png_set_invert_alpha(png);
+		}
+		else if (color_type == png_color_type::rgb)
+		{
+			png_set_filler(png, 0, image.pixel_format() == ARGB8? PNG_FILLER_BEFORE : PNG_FILLER_AFTER);
+		}
+	}
+
+	int x = static_cast<int>(rect.left * bytes_per_pixel);
+	int y = rect.top;
 	int y_end = rect.bottom();
 	int dy = 1;
 
+	aspect::image::quantizer quantizer;
 	if (color_type == png_color_type::palette)
 	{
 		quantizer.quantize(pixels, stride, rect, 0xff);
 		png_set_PLTE(png, info, (png_color*)quantizer.lut24(), 0xff);
-		y_begin = 0;
+
+		// quantizer generates index data already in the desired resolution, just store it
+		x = 0;
+		y = 0;
 		y_end = rect.height;
+		pixels = quantizer.result_data();
+		stride = rect.width;
 	}
-
-	png_set_IHDR(png, info, rect.width, rect.height, 8, libpng_color_type(color_type),
-		PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-
-	png_write_info(png, info);
-	png_set_packing(png);
-
-	// WARNING - always check RGB vs BGR
-	// png_set_bgr(ppng);
-	// png_set_strip_alpha(ppng);
 
 	if (flip)
 	{
-		std::swap(y_begin, y_end);
-		--y_begin; --y_end;
+		std::swap(y, y_end);
+		--y; --y_end;
 		dy = -1;
 	}
 
-	if (color_type == png_color_type::rgba)
+	png_write_info(png, info);
+	for (; y != y_end; y += dy)
 	{
-		for (int y = y_begin; y != y_end; y += dy)
-		{
-			png_write_row(png, &pixels[(y * stride) + (rect.left * bytes_per_pixel)]);
-		}
+		png_write_row(png, &pixels[(y * stride) + x]);
 	}
-	else if (color_type == png_color_type::rgb)
-	{
-		buffer buf(rect.width * 3);
-		for (int y = y_begin; y != y_end; y += dy)
-		{
-			uint8_t const* src = &pixels[(y * stride)+(rect.left * bytes_per_pixel)];;
-			uint8_t* dst = &buf[0];
-			for (int i = 0; i < rect.width; ++i)
-			{
-				dst[0] = src[2];
-				dst[1] = src[1];
-				dst[2] = src[0]; 
-				// dst[3] = src[0];
-				dst += 3; src += 4;
-			}
-			png_write_row(png, &buf[0]);
-		}
-	}
-	else if (color_type == png_color_type::palette)
-	{
-		// quantizer generates index data already in the desired resolution, just store it
-		for (int y = y_begin; y != y_end; y += dy)
-		{
-			png_write_row(png, quantizer.result_data() + y * rect.width);
-		}
-	}
-
 	png_write_end(png, NULL);
 
 	return "image/png";
@@ -156,7 +151,7 @@ std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 
 std::string generate_jpeg(bitmap const& image, buffer& result, image_rect rect, bool flip, int quality)
 {
-	rect = clamped_rect(rect, image.size());
+	rect = clamped_rect(image, rect);
 
 	uint8_t const* const pixels = image.data();
 	size_t const stride = rect.width * image.bytes_per_pixel();
@@ -185,10 +180,28 @@ std::string generate_jpeg(bitmap const& image, buffer& result, image_rect rect, 
 	jpeg_mem_dest(&cinfo, &buf_data, &buf_size);
 
 	// Step 3: set parameters for compression
-	cinfo.image_width			= rect.width;		// image width and height, in pixels
+	cinfo.image_width			= rect.width;      // image width and height, in pixels
 	cinfo.image_height			= rect.height;
-	cinfo.input_components		= 3;				// # of color components per pixel
-	cinfo.in_color_space		= JCS_RGB; 			// colorspace of input image
+	cinfo.input_components		= static_cast<int>(bytes_per_pixel); // # of color components per pixel
+	// colorspace of input image
+	switch (image.pixel_format())
+	{
+	case RGBA8:
+		cinfo.in_color_space = JCS_EXT_RGBA;
+		break;
+	case ARGB8:
+		cinfo.in_color_space = JCS_EXT_ARGB;
+		break;
+	case BGRA8:
+		cinfo.in_color_space = JCS_EXT_BGRA;
+		break;
+	case RGB8:
+		cinfo.in_color_space = JCS_EXT_RGB;
+		break;
+	default:
+		_aspect_assert(false && "unsupported pixel format");
+		return "";
+	}
 
 	// Now use the library's routine to set default compression parameters.
 	jpeg_set_defaults(&cinfo);
@@ -206,32 +219,21 @@ std::string generate_jpeg(bitmap const& image, buffer& result, image_rect rect, 
 	// To keep things simple, we pass one scanline per call; you can pass
 	// more if you wish, though.
 	//
-	buffer line_buf(3 *cinfo.image_width);
-
-	int y_begin = 0;
+	int const x = static_cast<int>(rect.left * bytes_per_pixel);
+	int y = 0;
 	int y_end = cinfo.image_height;
 	int dy = 1;
 	if (flip)
 	{
-		std::swap(y_begin, y_end);
-		--y_begin; --y_end;
+		std::swap(y, y_end);
+		--y; --y_end;
 		dy = -1;
 	}
 
-	for (int y = y_begin; y != y_end; y += dy)
+	for (; y != y_end; y += dy)
 	{
-		unsigned char* buf = &line_buf[0];
-		for (int x = 0; x!=(int)cinfo.image_width; ++x)
-		{
-//			gl::color24 *ptr = (gl::color24 *)(data+((y*get_width()+x)*bpp));
-			uint8_t const* ptr = pixels + ( (y + rect.top) * stride + (rect.left + x) * bytes_per_pixel);
-			buf[0] = ptr[2];
-			buf[1] = ptr[1];
-			buf[2] = ptr[0];
-			buf +=3;
-		}
-		uint8_t* line = &line_buf[0];
-		jpeg_write_scanlines(&cinfo, &line, 1);
+		uint8_t const* line = &pixels[(y * stride) + x];
+		jpeg_write_scanlines(&cinfo, const_cast<uint8_t**>(&line), 1);
 	}
 
 	// Step 6: Finish compression
@@ -248,60 +250,120 @@ std::string generate_jpeg(bitmap const& image, buffer& result, image_rect rect, 
 	return "image/jpeg";
 }
 
-std::string generate_bmp(bitmap const& image, buffer& result, image_rect rect, bool flip)
+// resize result buffer and fill BMP file headers for a 32 bit BMP with specified
+// dimensions and pixel format masks
+static size_t fill_bmp_headers(buffer& result, int32_t width, int32_t height,
+	uint32_t red_mask, uint32_t green_mask, uint32_t blue_mask, uint32_t alpha_mask)
 {
-#if OS(WINDOWS)
-	rect = clamped_rect(rect, image.size());
+	// See Windows SDK for BITMAPFILEHEADER and BITMAPV4HEADER structures
+	static uint32_t const sizeof_BITMAPFILEHEADER = 14;
+	static uint32_t const sizeof_BITMAPV4HEADER = 108;
 
-	size_t const offset = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
-	size_t const file_size = offset + (rect.width * rect.height * 4);
+	// offsets in BITMAPFILEHEADER
+	static uint32_t const BITMAPFILEHEADER_bfType = 0;
+	static uint32_t const BITMAPFILEHEADER_bfSize = 2;
+	static uint32_t const BITMAPFILEHEADER_bfOffBits = 10;
 
-	BITMAPFILEHEADER hdr = {};
-	hdr.bfType = 'B'+('M'<<8);
-	hdr.bfOffBits = static_cast<DWORD>(offset);
-	hdr.bfSize = static_cast<DWORD>(file_size);
+	// offsets in BITMAPV4HEADER
+	static uint32_t const BITMAPV4HEADER_bV4Size = 0;
+	static uint32_t const BITMAPV4HEADER_bV4Width = 4;
+	static uint32_t const BITMAPV4HEADER_bV4Height = 8;
+	static uint32_t const BITMAPV4HEADER_bV4Planes = 12;
+	static uint32_t const BITMAPV4HEADER_bV4BitCount = 14;
+	static uint32_t const BITMAPV4HEADER_bV4V4Compression = 16;
+	static uint32_t const BITMAPV4HEADER_bV4RedMask = 40;
+	static uint32_t const BITMAPV4HEADER_bV4GreenMask = 44;
+	static uint32_t const BITMAPV4HEADER_bV4BlueMask = 48;
+	static uint32_t const BITMAPV4HEADER_bV4AlphaMask = 52;
 
-	BITMAPINFOHEADER info = {};
-	info.biSize = sizeof(BITMAPINFOHEADER);
-	info.biBitCount = 32;
-	info.biPlanes = 1;
-	info.biCompression = BI_RGB;
-	info.biWidth = rect.width;
-	info.biHeight = rect.height;
+	static uint16_t const planes = 1;
+	static uint16_t const bits = 32;
+	static uint32_t const compression= 3; // BI_BITFIELDS
+
+	static uint32_t const info_offset = sizeof_BITMAPFILEHEADER;
+	static uint32_t const pixels_offset = sizeof_BITMAPFILEHEADER + sizeof_BITMAPV4HEADER;
+
+	uint32_t const image_size = width * height * 4;
+	uint32_t const file_size = pixels_offset + image_size;
 
 	result.resize(file_size);
-	uint8_t* ptr = &result[0];
 
-	memcpy(ptr, &hdr, sizeof(hdr));
-	ptr += sizeof(hdr);
-	
-	memcpy(ptr, &info, sizeof(info));
-	ptr += sizeof(info);
+	// fill BITMAPFILEHEADER
+	memcpy(&result[BITMAPFILEHEADER_bfType], "BM", 2);
+	memcpy(&result[BITMAPFILEHEADER_bfSize], &file_size, 4);
+	memcpy(&result[BITMAPFILEHEADER_bfOffBits], &pixels_offset, 4);
+
+	// fill BITMAPV4HEADER
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4Size], &sizeof_BITMAPV4HEADER, 4);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4Width], &width, 4);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4Height], &height, 4);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4Planes], &planes, 2);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4BitCount], &bits, 2);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4V4Compression], &compression, 4);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4RedMask], &red_mask, 4);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4GreenMask], &green_mask, 4);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4BlueMask], &blue_mask, 4);
+	memcpy(&result[info_offset + BITMAPV4HEADER_bV4AlphaMask], &alpha_mask, 4);
+
+	return pixels_offset;
+}
+
+std::string generate_bmp(bitmap const& image, buffer& result, image_rect rect, bool flip, bool with_alpha)
+{
+	rect = clamped_rect(image, rect);
+
+	uint32_t red_mask, green_mask, blue_mask, alpha_mask;
+
+	switch (image.pixel_format())
+	{
+	case RGBA8:
+		red_mask   = 0x000000FF;
+		green_mask = 0x0000FF00;
+		blue_mask  = 0x00FF0000;
+		alpha_mask = 0xFF000000;
+		break;
+	case ARGB8:
+		alpha_mask = 0x000000FF;
+		red_mask   = 0x0000FF00;
+		green_mask = 0x00FF0000;
+		blue_mask  = 0xFF000000;
+		break;
+	case BGRA8:
+		blue_mask  = 0x000000FF;
+		green_mask = 0x0000FF00;
+		red_mask   = 0x00FF0000;
+		alpha_mask = 0xFF000000;
+		break;
+	default:
+		_aspect_assert(false && "unsupported pixel format");
+		return "";
+	}
+	_aspect_assert(image.bytes_per_pixel() == 4);
+
+	size_t const pixels_offset = fill_bmp_headers(result, rect.width, rect.height,
+		red_mask, green_mask, blue_mask, with_alpha? alpha_mask : 0);
 
 	uint8_t const* pixels = image.data();
-	size_t const stride = rect.width * image.bytes_per_pixel();
+	size_t const stride = rect.width * 4;
 
-	int y_begin = rect.top;
+	int const x = rect.left * 4;
+	int y = rect.top;
 	int y_end = rect.bottom();
 	int dy = 1;
 	if (flip)
 	{
-		std::swap(y_begin, y_end);
-		--y_begin; --y_end;
+		std::swap(y, y_end);
+		--y; --y_end;
 		dy = -1;
 	}
-	for (int y = y_begin, iY = rect.height - 1; y != y_end; y += dy, --iY)
+	for (int iY = rect.height - 1; y != y_end; y += dy, --iY)
 	{
-		uint8_t const* src = &pixels[(y * stride)+(rect.left * 4)];
-		uint8_t* dst = ptr + (iY * rect.width * 4);
-		memcpy(dst, src, rect.width * 4);
+		uint8_t const* src = &pixels[(y * stride) + x];
+		uint8_t* dst = &result[pixels_offset] + (iY * stride);
+		memcpy(dst, src, stride);
 	}
 
 	return "image/bmp";
-#else
-#warning No BMP generation yet
-	return "none/none";
-#endif
 }
 
 }} // namespace aspect::image

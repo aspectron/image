@@ -24,10 +24,10 @@ private:
 /// compression is in [0..9], where 0 - no compression, 1 - best speed, 9 - best compression, -1 is default, see comression levels in libpng
 ///
 IMAGE_API std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
-	bool flip = false, int compression = -1, png_color_type color_type = png_color_type::palette);
+	bool flip = false, int compression = -1, png_color_type color_type = png_color_type::rgb);
 
 inline std::string generate_png(bitmap const& image, buffer& result,
-	bool flip = false, int compression = -1, png_color_type color_type = png_color_type::palette)
+	bool flip = false, int compression = -1, png_color_type color_type = png_color_type::rgb)
 {
 	return generate_png(image, result, image_rect(0, 0, image.size().width, image.size().height),
 		flip, compression, color_type);
@@ -42,11 +42,11 @@ inline std::string generate_jpeg(bitmap const& image, buffer& result, bool flip 
 }
 
 /// Compresses bitmap image rect into BMP and place in result buffer, return MIME type
-IMAGE_API std::string generate_bmp(bitmap const& image, buffer& result, image_rect rect, bool flip = false);
+IMAGE_API std::string generate_bmp(bitmap const& image, buffer& result, image_rect rect, bool flip = false, bool with_alpha = false);
 
-inline std::string generate_bmp(bitmap const& image, buffer& result, bool flip = false)
+inline std::string generate_bmp(bitmap const& image, buffer& result, bool flip = false, bool with_alpha = false)
 {
-	return generate_bmp(image, result, image_rect(0, 0, image.size().width, image.size().height), flip);
+	return generate_bmp(image, result, image_rect(0, 0, image.size().width, image.size().height), flip, with_alpha);
 }
 
 }} // namespace aspect::image
