@@ -148,9 +148,9 @@ typedef struct QuantizeContext {
 // build 3-D color histogram of counts, r/g/b, c^2
 static void Hist3d(int* vwt, int* vmr, int* vmg, int* vmb, float* m2, QuantizeContext* pqc) 
 {
-	register int ind, r, g, b;
+	 int ind, r, g, b;
 	int	     inr, ing, inb, table[256];
-	register long int i;
+	 long int i;
 
 	for(i=0; i<256; ++i) table[i]=i*i;
 	unsigned short* pqadd = pqc->Qadd;
@@ -204,8 +204,8 @@ static void Hist3d(int* vwt, int* vmr, int* vmg, int* vmb, float* m2, QuantizeCo
 /* compute cumulative moments. */
 static void M3d(int* vwt, int* vmr, int* vmg, int* vmb, float* m2) 
 {
-	register unsigned short int ind1, ind2;
-	register unsigned char i, r, g, b;
+	 unsigned short int ind1, ind2;
+	 unsigned char i, r, g, b;
 	int line, line_r, line_g, line_b,
 		 area[33], area_r[33], area_g[33], area_b[33];
 	float    line2, area2[33];
@@ -350,10 +350,10 @@ static float Maximize(
 	QuantizeContext* pqc
 )
 {
-	register int half_r, half_g, half_b, half_w;
+	 int half_r, half_g, half_b, half_w;
 	int base_r, base_g, base_b, base_w;
-	register int i;
-	register float temp, max;
+	 int i;
+	 float temp, max;
 
     base_r = Bottom(cube, dir, pqc->mr);
     base_g = Bottom(cube, dir, pqc->mg);
@@ -446,7 +446,7 @@ static int Cut(rgb_box *set1, rgb_box *set2, QuantizeContext* pqc)
 
 static void Mark(rgb_box *cube, int label, unsigned char *tag)
 {
-	register int r, g, b;
+	 int r, g, b;
 
 	for(r=cube->r0+1; r<=cube->r1; ++r)
 		for(g=cube->g0+1; g<=cube->g1; ++g)
