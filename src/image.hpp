@@ -187,7 +187,7 @@ public:
 
 	uint32_t get_dropped_frames() const { return dropped_frames_; }
 
-	virtual v8::Handle<v8::Value> get_info() const;
+	virtual v8::Handle<v8::Value> get_info(v8::Isolate* isolate) const;
 
 	virtual bool acquire_input_frame(shared_bitmap_container& frame) { return capture_queue_.try_pop(frame); }
 	virtual void acquire_input_frame_blocking(shared_bitmap_container& frame) { return capture_queue_.wait_and_pop(frame); }
