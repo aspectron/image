@@ -2,10 +2,11 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.56])
-AC_INIT([libmozjpeg], [1.0.0])
+AC_INIT([libmozjpeg], [2.0.1])
 BUILD=`date +%Y%m%d`
 
 AM_INIT_AUTOMAKE([-Wall foreign dist-bzip2])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES(yes)])
 AC_PREFIX_DEFAULT(/opt/libmozjpeg)
 
 # Always build with prototypes
@@ -16,8 +17,10 @@ SAVED_CFLAGS=${CFLAGS}
 SAVED_CPPFLAGS=${CPPFLAGS}
 AC_PROG_CPP
 AC_PROG_CC
+AM_PROG_CC_C_O
 AM_PROG_AS
 AC_PROG_INSTALL
+AM_PROG_AR
 AC_PROG_LIBTOOL
 AC_PROG_LN_S
 
@@ -90,6 +93,7 @@ if test "x${SUNCC}" = "xyes"; then
 fi
 
 # Checks for libraries.
+AC_CHECK_LIB([m],[pow])
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -235,13 +239,13 @@ VERS_1 {
   global: *;
 };
 EOF
-AC_LINK_IFELSE(AC_LANG_PROGRAM([], []),
+AC_LINK_IFELSE([AC_LANG_SOURCE([AC_LANG_PROGRAM([], [])])],
   [VERSION_SCRIPT_FLAG=-Wl,--version-script,;
    AC_MSG_RESULT([yes (GNU style)])],
   [])
 if test "x$VERSION_SCRIPT_FLAG" = "x"; then
   LDFLAGS="$SAVED_LDFLAGS -Wl,-M,conftest.map"
-  AC_LINK_IFELSE(AC_LANG_PROGRAM([], []),
+  AC_LINK_IFELSE([AC_LANG_SOURCE([AC_LANG_PROGRAM([], [])])],
     [VERSION_SCRIPT_FLAG=-Wl,-M,;
      AC_MSG_RESULT([yes (Sun style)])],
     [])
@@ -262,7 +266,7 @@ AC_SUBST(VERSION_SCRIPT_FLAG)
 AC_MSG_CHECKING(for inline)
 ljt_cv_inline=""
 AC_TRY_COMPILE(, [} __attribute__((always_inline)) int foo() { return 0; }
-int bar() { return foo();], ljt_cv_inline="__attribute__((always_inline))",
+int bar() { return foo();], ljt_cv_inline="inline __attribute__((always_inline))",
 AC_TRY_COMPILE(, [} __inline__ int foo() { return 0; }
 int bar() { return foo();], ljt_cv_inline="__inline__",
 AC_TRY_COMPILE(, [} __inline int foo() { return 0; }
@@ -270,7 +274,7 @@ int bar() { return foo();], ljt_cv_inline="__inline",
 AC_TRY_COMPILE(, [} inline int foo() { return 0; }
 int bar() { return foo();], ljt_cv_inline="inline"))))
 AC_MSG_RESULT($ljt_cv_inline)
-AC_DEFINE_UNQUOTED([INLINE],[$ljt_cv_inline],[How to obtain function inlining.])
+AC_DEFINE_UNQUOTED([INLINE],[inline $ljt_cv_inline],[How to obtain function inlining.])
 
 # Arithmetic coding support
 AC_MSG_CHECKING([whether to include arithmetic encoding support])

@@ -80,7 +80,7 @@ static const char * const cdjpeg_message_table[] = {
  */
 
 static boolean is_targa;	/* records user -targa switch */
-
+static boolean is_jpeg;
 
 LOCAL(cjpeg_source_ptr)
 select_file_type (j_compress_ptr cinfo, FILE * infile)
@@ -121,6 +121,9 @@ select_file_type (j_compress_ptr cinfo, FILE * infile)
   case 0x00:
     return jinit_read_targa(cinfo);
 #endif
+  case 0xff:
+    is_jpeg = TRUE;
+    return jinit_read_jpeg(cinfo);
   default:
     ERREXIT(cinfo, JERR_UNKNOWN_FORMAT);
     break;
@@ -170,6 +173,12 @@ usage (void)
 #endif
   fprintf(stderr, "  -revert        Revert to standard defaults (instead of mozjpeg defaults)\n");
   fprintf(stderr, "  -fastcrush     Disable progressive scan optimization\n");
+  fprintf(stderr, "  -multidcscan   Use multiple DC scans (may be incompatible with some JPEG decoders)\n");
+  fprintf(stderr, "  -notrellis     Disable trellis optimization\n");
+  fprintf(stderr, "  -tune-psnr     Tune trellis optimization for PSNR\n");
+  fprintf(stderr, "  -tune-hvs-psnr Tune trellis optimization for PSNR-HVS (default)\n");
+  fprintf(stderr, "  -tune-ssim     Tune trellis optimization for SSIM\n");
+  fprintf(stderr, "  -tune-ms-ssim  Tune trellis optimization for MS-SSIM\n");
   fprintf(stderr, "Switches for advanced users:\n");
 #ifdef C_ARITH_CODING_SUPPORTED
   fprintf(stderr, "  -arithmetic    Use arithmetic coding\n");
@@ -302,6 +311,10 @@ parse_switches (j_compress_ptr cinfo, int argc, char **argv,
     } else if (keymatch(arg, "fastcrush", 4)) {
       cinfo->optimize_scans = FALSE;
 
+    } else if (keymatch(arg, "flat", 4)) {
+      cinfo->use_flat_quant_tbl = TRUE;
+      jpeg_set_quality(cinfo, 75, TRUE);
+      
     } else if (keymatch(arg, "grayscale", 2) || keymatch(arg, "greyscale",2)) {
       /* Force a monochrome JPEG file to be generated. */
       jpeg_set_colorspace(cinfo, JCS_GRAYSCALE);
@@ -310,6 +323,16 @@ parse_switches (j_compress_ptr cinfo, int argc, char **argv,
       /* Force an RGB JPEG file to be generated. */
       jpeg_set_colorspace(cinfo, JCS_RGB);
 
+    } else if (keymatch(arg, "lambda1", 7)) {
+      if (++argn >= argc)	/* advance to next argument */
+	usage();
+      cinfo->lambda_log_scale1 = atof(argv[argn]);
+      
+    } else if (keymatch(arg, "lambda2", 7)) {
+      if (++argn >= argc)	/* advance to next argument */
+	usage();
+      cinfo->lambda_log_scale2 = atof(argv[argn]);
+      
     } else if (keymatch(arg, "maxmemory", 3)) {
       /* Maximum memory in Kb (or Mb with 'm'). */
       long lval;
@@ -323,6 +346,9 @@ parse_switches (j_compress_ptr cinfo, int argc, char **argv,
 	lval *= 1000L;
       cinfo->mem->max_memory_to_use = lval * 1000L;
 
+    } else if (keymatch(arg, "multidcscan", 3)) {
+      cinfo->one_dc_scan = FALSE;
+      
     } else if (keymatch(arg, "optimize", 1) || keymatch(arg, "optimise", 1)) {
       /* Enable entropy parm optimization. */
 #ifdef ENTROPY_OPT_SUPPORTED
@@ -446,6 +472,38 @@ parse_switches (j_compress_ptr cinfo, int argc, char **argv,
       /* Input file is Targa format. */
       is_targa = TRUE;
 
+    } else if (keymatch(arg, "notrellis", 1)) {
+      /* disable trellis quantization */
+      cinfo->trellis_quant = FALSE;
+      
+    } else if (keymatch(arg, "tune-psnr", 6)) {
+      cinfo->use_flat_quant_tbl = TRUE;
+      cinfo->lambda_log_scale1 = 9.0;
+      cinfo->lambda_log_scale2 = 0.0;
+      cinfo->use_lambda_weight_tbl = FALSE;
+      jpeg_set_quality(cinfo, 75, TRUE);
+      
+    } else if (keymatch(arg, "tune-ssim", 6)) {
+      cinfo->use_flat_quant_tbl = TRUE;
+      cinfo->lambda_log_scale1 = 12.0;
+      cinfo->lambda_log_scale2 = 13.5;
+      cinfo->use_lambda_weight_tbl = FALSE;
+      jpeg_set_quality(cinfo, 75, TRUE);
+      
+    } else if (keymatch(arg, "tune-ms-ssim", 6)) {
+      cinfo->use_flat_quant_tbl = FALSE;
+      cinfo->lambda_log_scale1 = 14.25;
+      cinfo->lambda_log_scale2 = 12.75;
+      cinfo->use_lambda_weight_tbl = TRUE;
+      jpeg_set_quality(cinfo, 75, TRUE);
+      
+    } else if (keymatch(arg, "tune-hvs-psnr", 6)) {
+      cinfo->use_flat_quant_tbl = FALSE;
+      cinfo->lambda_log_scale1 = 16.0;
+      cinfo->lambda_log_scale2 = 15.5;
+      cinfo->use_lambda_weight_tbl = TRUE;
+      jpeg_set_quality(cinfo, 75, TRUE);
+      
     } else {
       usage();			/* bogus switch */
     }
@@ -609,7 +667,10 @@ main (int argc, char **argv)
   (*src_mgr->start_input) (&cinfo, src_mgr);
 
   /* Now that we know input colorspace, fix colorspace-dependent defaults */
-  jpeg_default_colorspace(&cinfo);
+#if JPEG_RAW_READER
+  if (!is_jpeg)
+#endif
+    jpeg_default_colorspace(&cinfo);
 
   /* Adjust default compression parameters by re-parsing the options */
   file_index = parse_switches(&cinfo, argc, argv, 0, TRUE);
@@ -625,10 +686,47 @@ main (int argc, char **argv)
   /* Start compressor */
   jpeg_start_compress(&cinfo, TRUE);
 
+  /* Copy metadata */
+  if (is_jpeg) {
+    jpeg_saved_marker_ptr marker;
+    
+    /* In the current implementation, we don't actually need to examine the
+     * option flag here; we just copy everything that got saved.
+     * But to avoid confusion, we do not output JFIF and Adobe APP14 markers
+     * if the encoder library already wrote one.
+     */
+    for (marker = src_mgr->marker_list; marker != NULL; marker = marker->next) {
+      if (cinfo.write_JFIF_header &&
+          marker->marker == JPEG_APP0 &&
+          marker->data_length >= 5 &&
+          GETJOCTET(marker->data[0]) == 0x4A &&
+          GETJOCTET(marker->data[1]) == 0x46 &&
+          GETJOCTET(marker->data[2]) == 0x49 &&
+          GETJOCTET(marker->data[3]) == 0x46 &&
+          GETJOCTET(marker->data[4]) == 0)
+        continue;			/* reject duplicate JFIF */
+      if (cinfo.write_Adobe_marker &&
+          marker->marker == JPEG_APP0+14 &&
+          marker->data_length >= 5 &&
+          GETJOCTET(marker->data[0]) == 0x41 &&
+          GETJOCTET(marker->data[1]) == 0x64 &&
+          GETJOCTET(marker->data[2]) == 0x6F &&
+          GETJOCTET(marker->data[3]) == 0x62 &&
+          GETJOCTET(marker->data[4]) == 0x65)
+        continue;			/* reject duplicate Adobe */
+      jpeg_write_marker(&cinfo, marker->marker, marker->data, marker->data_length);
+    }
+  }
+  
   /* Process data */
   while (cinfo.next_scanline < cinfo.image_height) {
     num_scanlines = (*src_mgr->get_pixel_rows) (&cinfo, src_mgr);
-    (void) jpeg_write_scanlines(&cinfo, src_mgr->buffer, num_scanlines);
+#if JPEG_RAW_READER
+    if (is_jpeg)
+      (void) jpeg_write_raw_data(&cinfo, src_mgr->plane_pointer, num_scanlines);
+    else
+#endif
+      (void) jpeg_write_scanlines(&cinfo, src_mgr->buffer, num_scanlines);
   }
 
   /* Finish compression and release memory */
