@@ -1,5 +1,5 @@
-#include "image.hpp"
-#include "library.hpp"
+#include "image/image.hpp"
+#include "jsx/library.hpp"
 
 namespace aspect { namespace image {
 

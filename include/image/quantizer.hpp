@@ -1,8 +1,8 @@
 #ifndef IMAGE_QUANTIZER_HPP_INCLUDED
 #define IMAGE_QUANTIZER_HPP_INCLUDED
 
-#include "geometry.hpp"
-#include "types.hpp"
+#include "jsx/geometry.hpp"
+#include "jsx/types.hpp"
 
 namespace aspect { namespace image {
 

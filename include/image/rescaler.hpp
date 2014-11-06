@@ -1,8 +1,6 @@
 #ifndef IMAGE_RESCALER_HPP_INCLUDED
 #define IMAGE_RESCALER_HPP_INCLUDED
 
-#include "image.hpp"
-
 namespace aspect { namespace image {
 
 class IMAGE_API rescaler : boost::noncopyable

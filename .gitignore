@@ -12,8 +12,13 @@
 *.la
 *.a
 
+# Output directories
+/bin
+/doc
+
 # Visual Studio directories and files
-*.sln
+/ipch
+/obj*.sln
 *.vcxproj
 *.vcxproj.filters
 *.vcxproj.user

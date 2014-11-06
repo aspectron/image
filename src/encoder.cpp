@@ -1,5 +1,5 @@
-#include "image.hpp"
-#include "encoder.hpp"
+#include "image/image.hpp"
+#include "image/encoder.hpp"
 
 #include <png.h>
 #include <jpeglib.h>
@@ -7,8 +7,7 @@
 #include <boost/algorithm/clamp.hpp>
 #include <boost/scope_exit.hpp>
 
-#include "quantizer.hpp"
-#include "utils.hpp"
+#include "image/quantizer.hpp"
 
 namespace aspect { namespace image {
 

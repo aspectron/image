@@ -1,5 +1,5 @@
-#include "image.hpp"
-#include "quantizer.hpp"
+#include "image/image.hpp"
+#include "image/quantizer.hpp"
 
 namespace aspect { namespace image {
 

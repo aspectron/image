@@ -1,5 +1,5 @@
-#include "image.hpp"
-#include "rescaler.hpp"
+#include "image/image.hpp"
+#include "image/rescaler.hpp"
 
 namespace aspect { namespace image {
 

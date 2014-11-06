@@ -1,11 +1,11 @@
 #ifndef IMAGE_HPP_INCLUDED
 #define IMAGE_HPP_INCLUDED
 
-#include "core.hpp"
-#include "types.hpp"
-#include "geometry.hpp"
-#include "v8_core.hpp"
-#include "threads.hpp"
+#include "jsx/aligned_allocator.hpp"
+#include "jsx/geometry.hpp"
+#include "jsx/v8_core.hpp"
+#include "jsx/threads.hpp"
+#include "jsx/utils.hpp"
 
 #include <boost/thread/shared_mutex.hpp>
 
