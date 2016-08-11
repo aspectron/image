@@ -1,7 +1,6 @@
 {
 
     'target_defaults': {
-        'dependencies': ['<(jsx)/extern/zlib/zlib.gyp:zlib'],
         'direct_dependent_settings': {
             'include_dirs': ['.'],
         },
