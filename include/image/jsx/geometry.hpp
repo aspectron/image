@@ -182,23 +182,22 @@ inline bool operator >= (image_rect const& a, image_rect const& b)
 
 } // namespace aspect {
 
-namespace v8pp {
-
 template<typename T>
-struct convert< aspect::point<T> >
+struct v8pp::convert<aspect::point<T>>
 {
-	typedef aspect::point<T> result_type;
+	using from_type = aspect::point<T>;
+	using to_type = v8::Handle<v8::Object>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
 		return value->IsObject();
 	}
 
-	static result_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
 		v8::HandleScope scope(isolate);
 
-		result_type result;
+		from_type result;
 
 		if (value->IsArray())
 		{
@@ -226,7 +225,7 @@ struct convert< aspect::point<T> >
 		return result;
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, aspect::point<T> const& value)
+	static to_type to_v8(v8::Isolate* isolate, aspect::point<T> const& value)
 	{
 		v8::EscapableHandleScope scope(isolate);
 
@@ -239,16 +238,17 @@ struct convert< aspect::point<T> >
 };
 
 template<typename T>
-struct convert< aspect::box<T> >
+struct v8pp::convert<aspect::box<T>>
 {
-	typedef aspect::box<T> result_type;
+	using from_type = aspect::box<T>;
+	using to_type = v8::Handle<v8::Object>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
 		return value->IsObject();
 	}
 
-	static result_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
 		v8::HandleScope scope(isolate);
 
@@ -280,7 +280,7 @@ struct convert< aspect::box<T> >
 		return result;
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, aspect::box<T> const& value)
+	static to_type to_v8(v8::Isolate* isolate, aspect::box<T> const& value)
 	{
 		v8::EscapableHandleScope scope(isolate);
 
@@ -293,20 +293,21 @@ struct convert< aspect::box<T> >
 };
 
 template<typename T>
-struct convert< aspect::rectangle<T> >
+struct v8pp::convert<aspect::rectangle<T>>
 {
-	typedef aspect::rectangle<T> result_type;
+	using from_type = aspect::rectangle<T>;
+	using to_type = v8::Handle<v8::Object>;
 
 	static bool is_valid(v8::Isolate*, v8::Handle<v8::Value> value)
 	{
 		return value->IsObject();
 	}
 
-	static result_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
+	static from_type from_v8(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 	{
 		v8::HandleScope scope(isolate);
 
-		result_type result;
+		from_type result;
 
 		if (value->IsArray())
 		{
@@ -341,7 +342,7 @@ struct convert< aspect::rectangle<T> >
 		return result;
 	}
 
-	static v8::Handle<v8::Value> to_v8(v8::Isolate* isolate, aspect::rectangle<T> const& value)
+	static to_type to_v8(v8::Isolate* isolate, aspect::rectangle<T> const& value)
 	{
 		v8::EscapableHandleScope scope(isolate);
 
@@ -356,14 +357,13 @@ struct convert< aspect::rectangle<T> >
 };
 
 template<typename T>
-struct is_wrapped_class< aspect::point<T> > : std::false_type {};
+struct v8pp::is_wrapped_class< aspect::point<T> > : std::false_type {};
 
 template<typename T>
-struct is_wrapped_class< aspect::box<T> > : std::false_type {};
+struct v8pp::is_wrapped_class< aspect::box<T> > : std::false_type {};
 
 template<typename T>
-struct is_wrapped_class< aspect::rectangle<T> > : std::false_type {};
+struct v8pp::is_wrapped_class< aspect::rectangle<T> > : std::false_type {};
 
-} // v8pp
 
 #endif // JSX_GEOMETRY_HPP_INCLUDED
