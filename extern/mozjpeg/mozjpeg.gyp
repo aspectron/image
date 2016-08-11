@@ -29,7 +29,7 @@
                     'action_name': 'Configure',
                     'inputs': ['configure.py', 'win/jconfig.h.in', 'win/config.h.in'],
                     'outputs': ['jconfig.h', 'config.h'],
-                    'action': ['<(PYTHON)', 'configure.py',
+                    'action': ['python', 'configure.py',
                         '--project=libmozjpeg', '--version=<(version)', '--jpeg_lib_version=<(jpeg_lib_version)', 
                         '--arith_enc=<(arith_enc)', '--arith_dec=<(arith_dec)', '--mem_srcdst=<(mem_srcdst)',
                     ],

@@ -2,6 +2,10 @@
 
 import argparse
 import datetime
+import os
+
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
+os.chdir(SCRIPT_DIR)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--project', default='libmozjpeg',
