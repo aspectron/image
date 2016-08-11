@@ -22,6 +22,7 @@
             'dependencies': [
                 'extern/libpng/libpng.gyp:libpng',
                 'extern/mozjpeg/mozjpeg.gyp:mozjpeg',
+                'extern/zlib/zlib.gyp:zlib',
             ],
             'include_dirs': ['<@(include_dirs)'],
             'direct_dependent_settings': {
@@ -29,7 +30,6 @@
             },
             'defines': ['IMAGE_EXPORTS'],
             'sources': ['<@(include_files)', '<@(source_files)'],
-            'msvs_settings': { 'VCLinkerTool': { 'AdditionalOptions': ['/FORCE:UNRESOLVED'] } },
         },
     ],
 }
