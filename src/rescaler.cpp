@@ -1,6 +1,8 @@
 #include "image/image.hpp"
 #include "image/rescaler.hpp"
 
+#include <cassert>
+
 namespace aspect { namespace image {
 
 #define _clip(a, min, max) (a < min ? min : (a > max ? max : a))
@@ -279,7 +281,7 @@ void rescaler::alloc(int dst_width, int dst_height, bool reassign)
 {
 	if(reassign)
 	{
-		_aspect_assert(owns_data_orig_ == false);
+		assert(owns_data_orig_ == false);
 
 		data_orig_ = data_result_;
 		src_stride_ = dst_stride_;

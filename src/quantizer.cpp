@@ -1,6 +1,8 @@
 #include "image/image.hpp"
 #include "image/quantizer.hpp"
 
+#include <cassert>
+
 namespace aspect { namespace image {
 
 struct color24;

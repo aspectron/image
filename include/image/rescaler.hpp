@@ -3,10 +3,9 @@
 
 namespace aspect { namespace image {
 
-class IMAGE_API rescaler : boost::noncopyable
+class IMAGE_API rescaler
 {
 private:
-
 	template<uint32_t N>
 	float get(int x,int y);
 
@@ -50,6 +49,8 @@ public:
 
 	rescaler();
 	~rescaler();
+	rescaler(rescaler const&) = delete;
+	rescaler& operator=(rescaler const&) = delete;
 
 	/// Rescale
 	//

@@ -1,20 +1,22 @@
 #include "image/image.hpp"
 #include "image/encoder.hpp"
+#include "image/quantizer.hpp"
 
 #include <png.h>
 #include <jpeglib.h>
 
-#include <boost/algorithm/clamp.hpp>
-#include <boost/scope_exit.hpp>
-
-#include "image/quantizer.hpp"
+#include <cassert>
 
 namespace aspect { namespace image {
 
+template<typename T>
+T clamp(T value, T low, T high)
+{
+	return value < low ? low : (value > high? high : value);
+}
+
 inline image_rect clamped_rect(bitmap const& image, image_rect rect)
 {
-	using boost::algorithm::clamp;
-
 	rect = image_rect(
 		clamp(rect.left, 0, image.size().width),
 		clamp(rect.top, 0, image.size().height),
@@ -22,8 +24,8 @@ inline image_rect clamped_rect(bitmap const& image, image_rect rect)
 		clamp(rect.height, 0, image.size().height - rect.top)
 	);
 
-	_aspect_assert(image.data() && !image.size().is_empty() && !rect.is_empty());
-	_aspect_assert(image.pixel_format() == RGBA8
+	assert(image.data() && !image.size().is_empty() && !rect.is_empty());
+	assert(image.pixel_format() == RGBA8
 		|| image.pixel_format() == ARGB8
 		|| image.pixel_format() == BGRA8
 		||  image.pixel_format() == RGB8);
@@ -42,7 +44,7 @@ inline int libpng_color_type(png_color_type color_type)
 	case png_color_type::rgba:
 		return PNG_COLOR_TYPE_RGBA;
 	default:
-		_aspect_assert(false && "unknown png_color_type");
+		assert(false && "unknown png_color_type");
 		return -1;
 	}
 }
@@ -62,6 +64,17 @@ inline void png_flush_file(png_struct*)
 	// do nothing - used for flushing file i/o
 }
 
+template<typename F>
+struct scope_guard_t
+{
+	scope_guard_t(F&& fun) : on_exit(std::move(fun)) {}
+	~scope_guard_t() { on_exit(); }
+	F on_exit;
+};
+
+template<typename F>
+auto scope_guard(F&& f) { return scope_guard_t<F>(std::move(f)); }
+
 std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 	bool flip, int compression, png_color_type color_type)
 {
@@ -73,15 +86,13 @@ std::string generate_png(bitmap const& image, buffer& result, image_rect rect,
 
 	png_struct* png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	png_info* info = png_create_info_struct(png);
-
-	BOOST_SCOPE_EXIT(&png, &info)
+	auto const destroy_on_exit = scope_guard([&png, &info]()
 	{
 		png_destroy_info_struct(png, &info);
 		png_destroy_write_struct(&png, &info);
-	} 
-	BOOST_SCOPE_EXIT_END
+	});
 
-	_aspect_assert(png && info);
+	assert(png && info);
 	png_set_write_fn(png, &result, &png_write_file, &png_flush_file);
 
 	png_set_compression_level(png, compression);
@@ -161,12 +172,11 @@ std::string generate_jpeg(bitmap const& image, buffer& result, image_rect rect, 
 	unsigned char* buf_data = NULL;
 	unsigned long  buf_size = 0;
 
-	BOOST_SCOPE_EXIT(&cinfo, &buf_data)
+	auto const destroy_on_exit = scope_guard([&cinfo, buf_data]()
 	{
 		jpeg_destroy_compress(&cinfo);
 		free(buf_data);
-	}
-	BOOST_SCOPE_EXIT_END
+	});
 
 	// Step 1: allocate and initialize JPEG compression objects
 	cinfo.err = jpeg_std_error(&jerr);
@@ -198,7 +208,7 @@ std::string generate_jpeg(bitmap const& image, buffer& result, image_rect rect, 
 		cinfo.in_color_space = JCS_EXT_RGB;
 		break;
 	default:
-		_aspect_assert(false && "unsupported pixel format");
+		assert(false && "unsupported pixel format");
 		return "";
 	}
 
@@ -334,10 +344,10 @@ std::string generate_bmp(bitmap const& image, buffer& result, image_rect rect, b
 		alpha_mask = 0xFF000000;
 		break;
 	default:
-		_aspect_assert(false && "unsupported pixel format");
+		assert(false && "unsupported pixel format");
 		return "";
 	}
-	_aspect_assert(image.bytes_per_pixel() == 4);
+	assert(image.bytes_per_pixel() == 4);
 
 	size_t const pixels_offset = fill_bmp_headers(result, rect.width, rect.height,
 		red_mask, green_mask, blue_mask, with_alpha? alpha_mask : 0);

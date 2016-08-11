@@ -1,15 +1,19 @@
 #include "image/image.hpp"
-#include "jsx/library.hpp"
+
+#include <node.h>
+
+#include <v8pp/module.hpp>
+#include <v8pp/class.hpp>
 
 namespace aspect { namespace image {
 
 // https://github.com/ofTheo/videoInput/blob/master/videoInputSrcAndDemos/libs/videoInput/videoInput.cpp
 // http://www.codeproject.com/Articles/12869/Real-time-video-image-processing-frame-grabber-usi
 
-DECLARE_LIBRARY_ENTRYPOINTS(image_install, image_uninstall);
 
-v8::Handle<v8::Value> image_install(v8::Isolate* isolate)
+static void init(v8::Handle<v8::Object> exports, v8::Handle<v8::Object> module)
 {
+	v8::Isolate* isolate = v8::Isolate::GetCurrent();
 	v8pp::module image_module(isolate);
 
 	v8pp::class_<device> device_class(isolate);
@@ -17,15 +21,10 @@ v8::Handle<v8::Value> image_install(v8::Isolate* isolate)
 		.set("get_dropped_frames", &device::get_dropped_frames)
 		;
 	image_module.set("__image_device_interface", device_class);
-
-	return image_module.new_instance();
+	
+	exports->SetPrototype(image_module.new_instance());
 }
-
-void image_uninstall(v8::Isolate* isolate, v8::Handle<v8::Value> library)
-{
-	(void)isolate;
-	(void)library;
-}
+NODE_MODULE(image, init);
 
 size_t bitmap::total_memory_ = 0;
 
@@ -93,7 +92,7 @@ v8::Handle<v8::Value> device::get_info(v8::Isolate* isolate) const
 	v8::EscapableHandleScope scope(isolate);
 
 	v8::Local<v8::Object> o = v8::Object::New(isolate);
-	set_option(isolate, o, "dropped_frames", dropped_frames_);
+	v8pp::set_option(isolate, o, "dropped_frames", dropped_frames_);
 
 	return scope.Escape(o);
 }

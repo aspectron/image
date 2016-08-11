@@ -3,13 +3,11 @@
 
 #include "jsx/aligned_allocator.hpp"
 #include "jsx/geometry.hpp"
-#include "jsx/v8_core.hpp"
 #include "jsx/threads.hpp"
-#include "jsx/utils.hpp"
 
-#include <boost/thread/shared_mutex.hpp>
+#include <shared_mutex>
 
-#if OS(WINDOWS)
+#if _MSC_VER
 //	#pragma warning ( disable : 4251 )
 #if defined(IMAGE_EXPORTS)
 #define IMAGE_API __declspec(dllexport)
@@ -23,6 +21,9 @@
 #endif
 
 namespace aspect { namespace image {
+
+typedef std::vector<uint8_t> buffer;
+typedef std::shared_ptr<buffer> shared_buffer;
 
 /// Image pixel format
 enum encoding
@@ -40,13 +41,12 @@ enum encoding
 };
 
 /// Bitmap image with specified size and pixel format
-class IMAGE_API bitmap : boost::noncopyable
+class IMAGE_API bitmap
 {
 public:
-	explicit bitmap()
-		: pixel_format_(UNKNOWN)
-	{
-	}
+	bitmap() : pixel_format_(UNKNOWN) {}
+	bitmap(bitmap const&) = delete;
+	bitmap& operator=(bitmap const&) = delete;
 
 	/// Create a bitmap with specified size and pixel format
 	bitmap(image_size const& size, encoding pixel_format = BGRA8)
@@ -62,7 +62,7 @@ public:
 	/// Resize bitmap and change pixel format
 	void resize(image_size const& size, encoding pixel_format)
 	{
-		boost::unique_lock<boost::shared_mutex> lock(shared_mutex_);
+		std::unique_lock<std::shared_mutex> lock(shared_mutex_);
 
 		if (size != size_ || pixel_format_ == pixel_format)
 		{
@@ -103,7 +103,7 @@ public:
 
 	size_t data_size() const { return data_.size(); }
 
-	boost::shared_mutex& shared_mutex() { return shared_mutex_; }
+	std::shared_mutex& shared_mutex() { return shared_mutex_; }
 
 	/// Create checkerboard with lines between checkers
 	void checker3(const uint32_t c1 = 0x20202020, const uint32_t c2 = 0x40404040, const uint32_t c3 = 0x80808080);
@@ -112,7 +112,7 @@ public:
 	void checker2(const uint32_t c1 = 0x00000000, const uint32_t c2 = 0xffffffff);
 
 private:
-	boost::shared_mutex shared_mutex_;
+	std::shared_mutex shared_mutex_;
 
 	image_size size_;
 	std::vector<uint8_t, aligned_allocator<uint8_t, 32>> data_;
@@ -121,7 +121,7 @@ private:
 	static size_t total_memory_;
 };
 
-typedef boost::shared_ptr<bitmap> shared_bitmap;
+typedef std::shared_ptr<bitmap> shared_bitmap;
 
 class IMAGE_API shared_bitmap_container
 {
@@ -192,7 +192,7 @@ public:
 	virtual bool acquire_input_frame(shared_bitmap_container& frame) { return capture_queue_.try_pop(frame); }
 	virtual void acquire_input_frame_blocking(shared_bitmap_container& frame) { return capture_queue_.wait_and_pop(frame); }
 	virtual void release_input_frame(shared_bitmap_container const& frame) { available_queue_.push(frame); }
-	virtual void schedule_output_frame(shared_bitmap_container const&) { _aspect_assert(false && "aspecet::image::device::schedule_output_frame() is not overloaded"); }
+	virtual void schedule_output_frame(shared_bitmap_container const&) = 0;
 	virtual void schedule_input_frame(shared_bitmap_container const& frame, bool drop_frames);
 
 protected:
