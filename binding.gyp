@@ -33,6 +33,7 @@
                 'include_dirs': ['<@(include_dirs)'],
             },
             'defines': ['IMAGE_EXPORTS'],
+            'defines!': ['V8_DEPRECATION_WARNINGS=1'],
             'sources': ['<@(include_files)', '<@(source_files)'],
         },
     ],
