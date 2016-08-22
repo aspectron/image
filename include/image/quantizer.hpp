@@ -2,7 +2,7 @@
 #define IMAGE_QUANTIZER_HPP_INCLUDED
 
 #include "image.hpp"
-#include "jsx/geometry.hpp"
+#include "nitrogen/geometry.hpp"
 
 namespace aspect { namespace image {
 

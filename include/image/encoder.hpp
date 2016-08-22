@@ -1,7 +1,7 @@
 #ifndef IMAGE_ENCODER_HPP_INCLUDED
 #define IMAGE_ENCODER_HPP_INCLUDED
 
-#include "jsx/geometry.hpp"
+#include "nitrogen/geometry.hpp"
 
 namespace aspect { namespace image {
 

@@ -9,6 +9,7 @@
   "bugs": { "url": "https://github.com/aspectron/image/issues" },
   "homepage": "https://github.com/aspectron/image#readme",
   "dependencies": {
-    "v8pp": "^1.0"
+    "v8pp": "^1.0",
+    "nitrogen": "git+ssh://github.com/aspectron/nitrogen.git#nodejs"
   }
 }

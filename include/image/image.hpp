@@ -1,9 +1,9 @@
 #ifndef IMAGE_HPP_INCLUDED
 #define IMAGE_HPP_INCLUDED
 
-#include "jsx/aligned_allocator.hpp"
-#include "jsx/geometry.hpp"
-#include "jsx/threads.hpp"
+#include "nitrogen/aligned_allocator.hpp"
+#include "nitrogen/geometry.hpp"
+#include "nitrogen/threads.hpp"
 
 #include <shared_mutex>
 

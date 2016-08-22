@@ -1,9 +1,6 @@
 {
     'variables': {
         'include_files': [
-            'include/image/jsx/aligned_allocator.hpp',
-            'include/image/jsx/geometry.hpp',
-            'include/image/jsx/threads.hpp',
             'include/image/image.hpp',
             'include/image/encoder.hpp',
             'include/image/quantizer.hpp',
@@ -15,7 +12,10 @@
             'src/quantizer.cpp',
             'src/rescaler.cpp',
         ],
-        'include_dirs': ['include', '<!(node -e require(\'v8pp\'))'],
+        'include_dirs': ['include',
+            '<!(node -e require(\'v8pp\'))',
+            '<!@(<!(npm bin)/pkgdeps include nitrogen)'
+        ],
     },
     'targets': [
         {
