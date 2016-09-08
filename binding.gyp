@@ -14,7 +14,7 @@
         ],
         'include_dirs': ['include',
             '<!(node -e require(\'v8pp\'))',
-            '<!@(<!(npm bin)/pkgdeps include nitrogen)'
+            '<!@(pkgdeps include nitrogen)'
         ],
     },
     'targets': [
