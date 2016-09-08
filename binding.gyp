@@ -1,5 +1,5 @@
 {
-    'includes': ['node_modules/nitrogen/common.gypi'],
+    'includes': ['common.gypi'],
     'variables': {
         'include_files': [
             'include/image/image.hpp',

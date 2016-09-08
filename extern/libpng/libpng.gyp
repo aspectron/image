@@ -1,6 +1,6 @@
 {
 
-    'includes': ['../../node_modules/nitrogen/common.gypi'],
+    'includes': ['../../common.gypi'],
     'target_defaults': {
         'direct_dependent_settings': {
             'include_dirs': ['.'],

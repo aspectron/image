@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 {
-  'includes': ['../../node_modules/nitrogen/common.gypi'],
+  'includes': ['../../common.gypi'],
   'variables': {
     'use_system_zlib%': 0
   },

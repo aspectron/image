@@ -1,5 +1,5 @@
 {
-    'includes': ['../../node_modules/nitrogen/common.gypi'],
+    'includes': ['../../common.gypi'],
     'variables': {
         'version': '1.0.1',
         'simd%': 0,             # Include SIMD extensions
