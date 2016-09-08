@@ -1,4 +1,5 @@
 {
+    'includes': ['node_modules/nitrogen/common.gypi'],
     'variables': {
         'include_files': [
             'include/image/image.hpp',
@@ -20,18 +21,6 @@
     'targets': [
         {
             'target_name': 'image',
-            'cflags_cc+': ['-std=c++11', '-fexceptions'],
-             'configurations': {
-                'Debug': { 'msvs_settings': { 'VCCLCompilerTool': {
-                    'ExceptionHandling': 1,
-                    'RuntimeLibrary': 3, # MultiThreadedDebugDLL
-                }}},
-                'Release': { 'msvs_settings': { 'VCCLCompilerTool': {
-                    'ExceptionHandling': 1,
-                    'RuntimeLibrary': 2, # MultiThreadedDLL
-                }}},
-            },
-           'xcode_settings': { 'GCC_ENABLE_CPP_EXCEPTIONS': 'YES' },
             'dependencies': [
                 'extern/libpng/libpng.gyp:libpng',
                 'extern/mozjpeg/mozjpeg.gyp:mozjpeg',
@@ -42,7 +31,6 @@
                 'include_dirs': ['<@(include_dirs)'],
             },
             'defines': ['IMAGE_EXPORTS'],
-            'defines!': ['V8_DEPRECATION_WARNINGS=1'],
             'sources': ['<@(include_files)', '<@(source_files)'],
         },
     ],
