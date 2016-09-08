@@ -2,7 +2,7 @@
   "name": "image",
   "version": "1.0.0",
   "description": "Image processing",
-  "main": "build/Release/image.node",
+  "main": "./build/Release/image.node",
   "repository": { "type": "git", "url": "git://github.com/aspectron/image.git" },
   "author": "Aspectron Inc.",
   "license": "MIT",
