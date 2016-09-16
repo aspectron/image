@@ -1,5 +1,4 @@
 {
-
     'includes': ['../../common.gypi'],
     'target_defaults': {
         'direct_dependent_settings': {
